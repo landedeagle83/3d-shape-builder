@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Shape Builder</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -12,12 +12,14 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             overflow: hidden;
             background: #1a1a2e;
+            touch-action: none;
         }
 
         #canvas-container {
@@ -28,27 +30,32 @@
             height: 100%;
         }
 
-        /* Top Toolbar */
-        .toolbar {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 25px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        /* Mobile-first toolbar at bottom */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
             z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .shape-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 16px 8px;
+            border-bottom: 1px solid #eee;
         }
 
         .shape-btn {
-            width: 60px;
-            height: 60px;
-            border: 3px solid #e0e0e0;
-            border-radius: 15px;
-            background: white;
+            width: 56px;
+            height: 56px;
+            border: none;
+            border-radius: 16px;
+            background: #f5f5f5;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -57,454 +64,511 @@
             transition: all 0.2s;
         }
 
-        .shape-btn:hover {
-            transform: scale(1.1);
-            border-color: #6c5ce7;
-            background: #f0f0ff;
+        .shape-btn:active {
+            transform: scale(0.9);
+            background: #e0e0ff;
         }
 
-        .shape-btn:active {
+        .action-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 8px;
+        }
+
+        .action-btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn:active {
             transform: scale(0.95);
         }
 
-        /* Side Panel */
-        .side-panel {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.95);
+        .btn-undo {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-delete {
+            background: #ffe5e5;
+            color: #e74c3c;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white;
+        }
+
+        /* Edit panel - slides up */
+        .edit-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 200;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .edit-panel.open {
+            transform: translateY(0);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            z-index: 100;
-            min-width: 200px;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            background: white;
         }
 
         .panel-title {
             font-size: 18px;
             font-weight: bold;
-            color: #333;
-            margin-bottom: 15px;
-            text-align: center;
         }
 
-        .control-group {
-            margin-bottom: 20px;
+        .close-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background: #f5f5f5;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .panel-content {
+            padding: 20px;
+        }
+
+        .control-section {
+            margin-bottom: 24px;
         }
 
         .control-label {
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 600;
             color: #666;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             display: block;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .slider-row {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            gap: 12px;
         }
 
         .slider-row label {
-            width: 20px;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-weight: bold;
-            color: #6c5ce7;
+            font-size: 12px;
+            color: white;
         }
+
+        .slider-row label.x { background: #e74c3c; }
+        .slider-row label.y { background: #2ecc71; }
+        .slider-row label.z { background: #3498db; }
 
         input[type="range"] {
             flex: 1;
-            height: 8px;
-            border-radius: 4px;
-            background: #e0e0e0;
+            height: 36px;
+            border-radius: 8px;
+            background: #f0f0f0;
             outline: none;
             -webkit-appearance: none;
+            padding: 0 8px;
         }
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: #6c5ce7;
             cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .slider-value {
-            width: 45px;
-            text-align: right;
-            font-size: 12px;
-            color: #333;
-        }
-
-        .color-picker {
-            width: 100%;
-            height: 45px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            padding: 5px;
-        }
-
-        .action-btn {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 10px;
-            border: none;
-            border-radius: 12px;
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
             font-size: 14px;
-            font-weight: bold;
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .color-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .color-btn {
+            width: 48px;
+            height: 48px;
+            border: 3px solid transparent;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .action-btn:hover {
-            transform: translateY(-2px);
+        .color-btn.selected {
+            border-color: #333;
+            transform: scale(1.1);
         }
 
-        .btn-delete {
-            background: #ff6b6b;
-            color: white;
+        .panel-actions {
+            display: flex;
+            gap: 12px;
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .panel-action-btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
         .btn-duplicate {
-            background: #4ecdc4;
-            color: white;
+            background: #e8f5e9;
+            color: #2e7d32;
         }
 
-        .btn-group {
-            background: #a29bfe;
-            color: white;
+        .btn-delete-large {
+            background: #ffebee;
+            color: #c62828;
         }
 
-        /* Bottom Toolbar */
-        .bottom-toolbar {
-            position: absolute;
-            bottom: 20px;
+        /* Selection indicator */
+        .selection-indicator {
+            position: fixed;
+            top: 60px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            z-index: 100;
-        }
-
-        .export-btn {
-            padding: 15px 40px;
-            border: none;
-            border-radius: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .export-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-export-stl {
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            background: rgba(108, 92, 231, 0.95);
             color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            z-index: 100;
+            display: none;
             box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
         }
 
-        .btn-clear {
-            background: #636e72;
-            color: white;
-        }
-
-        .btn-undo {
-            background: #fdcb6e;
-            color: #333;
-        }
-
-        /* Object List */
-        .object-list {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            z-index: 100;
-            max-height: 400px;
-            overflow-y: auto;
-            min-width: 180px;
-        }
-
-        .object-item {
-            padding: 10px 15px;
-            margin-bottom: 5px;
-            border-radius: 10px;
-            cursor: pointer;
+        .selection-indicator.show {
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.2s;
-            background: #f5f5f5;
         }
 
-        .object-item:hover {
-            background: #e8e8ff;
-        }
-
-        .object-item.selected {
-            background: #6c5ce7;
-            color: white;
-        }
-
-        .object-icon {
-            font-size: 20px;
-        }
-
-        .object-name {
+        .edit-btn {
+            background: white;
+            color: #6c5ce7;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
             font-size: 14px;
+            cursor: pointer;
         }
 
-        /* Instructions */
-        .instructions {
-            position: absolute;
-            bottom: 80px;
+        /* Object counter */
+        .object-counter {
+            position: fixed;
+            top: 20px;
             left: 20px;
             background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 15px 20px;
+            padding: 10px 16px;
             border-radius: 12px;
-            font-size: 13px;
+            font-size: 14px;
             z-index: 50;
         }
 
-        .instructions h4 {
-            margin-bottom: 8px;
-            color: #a29bfe;
-        }
-
-        .instructions p {
-            margin: 4px 0;
-            opacity: 0.9;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            color: #999;
-            padding: 20px;
-        }
-
-        /* Mode indicator */
-        .mode-indicator {
-            position: absolute;
-            top: 100px;
+        /* Help tip */
+        .help-tip {
+            position: fixed;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 300;
+            max-width: 300px;
+        }
+
+        .help-tip h3 {
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .help-tip p {
+            margin: 10px 0;
+            opacity: 0.9;
+            font-size: 15px;
+        }
+
+        .help-tip button {
+            margin-top: 20px;
+            padding: 14px 40px;
             background: #6c5ce7;
             color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            z-index: 100;
-            display: none;
-        }
-
-        .mode-indicator.active {
-            display: block;
-        }
-
-        /* Boolean operations */
-        .boolean-section {
-            border-top: 2px solid #e0e0e0;
-            padding-top: 15px;
-            margin-top: 15px;
-        }
-
-        .boolean-btn {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 8px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            background: white;
-            font-size: 13px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
         }
 
-        .boolean-btn:hover {
-            border-color: #6c5ce7;
-            background: #f0f0ff;
+        .hidden {
+            display: none !important;
         }
 
-        .boolean-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        /* Quick actions floating */
+        .quick-actions {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .quick-btn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.95);
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .quick-btn:active {
+            transform: scale(0.9);
         }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
 
-    <!-- Shape Toolbar -->
-    <div class="toolbar">
-        <button class="shape-btn" onclick="addShape('cube')" title="Cube">📦</button>
-        <button class="shape-btn" onclick="addShape('sphere')" title="Sphere">🔮</button>
-        <button class="shape-btn" onclick="addShape('cylinder')" title="Cylinder">🥫</button>
-        <button class="shape-btn" onclick="addShape('cone')" title="Cone">🍦</button>
-        <button class="shape-btn" onclick="addShape('pyramid')" title="Pyramid">🔺</button>
-        <button class="shape-btn" onclick="addShape('torus')" title="Donut">🍩</button>
+    <!-- Object Counter -->
+    <div class="object-counter" id="objectCounter">🎨 0 shapes</div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <button class="quick-btn" onclick="undo()" title="Undo">↩️</button>
+        <button class="quick-btn" onclick="showHelp()" title="Help">❓</button>
     </div>
 
-    <!-- Mode Indicator -->
-    <div class="mode-indicator" id="modeIndicator">Select second object for operation</div>
-
-    <!-- Object List -->
-    <div class="object-list">
-        <div class="panel-title">🎨 Objects</div>
-        <div id="objectList">
-            <div class="empty-state">Click a shape to start!</div>
-        </div>
+    <!-- Selection Indicator -->
+    <div class="selection-indicator" id="selectionIndicator">
+        <span id="selectedName">Cube 1</span>
+        <button class="edit-btn" onclick="openEditPanel()">Edit ✏️</button>
     </div>
 
-    <!-- Side Panel -->
-    <div class="side-panel" id="sidePanel" style="display: none;">
-        <div class="panel-title">✏️ Edit Shape</div>
-        
-        <div class="control-group">
-            <span class="control-label">Size</span>
-            <div class="slider-row">
-                <label>X</label>
-                <input type="range" id="scaleX" min="0.1" max="5" step="0.1" value="1">
-                <span class="slider-value" id="scaleXVal">1.0</span>
-            </div>
-            <div class="slider-row">
-                <label>Y</label>
-                <input type="range" id="scaleY" min="0.1" max="5" step="0.1" value="1">
-                <span class="slider-value" id="scaleYVal">1.0</span>
-            </div>
-            <div class="slider-row">
-                <label>Z</label>
-                <input type="range" id="scaleZ" min="0.1" max="5" step="0.1" value="1">
-                <span class="slider-value" id="scaleZVal">1.0</span>
-            </div>
+    <!-- Bottom Bar -->
+    <div class="bottom-bar" id="bottomBar">
+        <div class="shape-bar">
+            <button class="shape-btn" onclick="addShape('cube')">📦</button>
+            <button class="shape-btn" onclick="addShape('sphere')">🔮</button>
+            <button class="shape-btn" onclick="addShape('cylinder')">🥫</button>
+            <button class="shape-btn" onclick="addShape('cone')">🍦</button>
+            <button class="shape-btn" onclick="addShape('pyramid')">🔺</button>
+            <button class="shape-btn" onclick="addShape('torus')">🍩</button>
         </div>
-
-        <div class="control-group">
-            <span class="control-label">Position</span>
-            <div class="slider-row">
-                <label>X</label>
-                <input type="range" id="posX" min="-10" max="10" step="0.5" value="0">
-                <span class="slider-value" id="posXVal">0</span>
-            </div>
-            <div class="slider-row">
-                <label>Y</label>
-                <input type="range" id="posY" min="-10" max="10" step="0.5" value="0">
-                <span class="slider-value" id="posYVal">0</span>
-            </div>
-            <div class="slider-row">
-                <label>Z</label>
-                <input type="range" id="posZ" min="-10" max="10" step="0.5" value="0">
-                <span class="slider-value" id="posZVal">0</span>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <span class="control-label">Rotation</span>
-            <div class="slider-row">
-                <label>X</label>
-                <input type="range" id="rotX" min="0" max="360" step="5" value="0">
-                <span class="slider-value" id="rotXVal">0°</span>
-            </div>
-            <div class="slider-row">
-                <label>Y</label>
-                <input type="range" id="rotY" min="0" max="360" step="5" value="0">
-                <span class="slider-value" id="rotYVal">0°</span>
-            </div>
-            <div class="slider-row">
-                <label>Z</label>
-                <input type="range" id="rotZ" min="0" max="360" step="5" value="0">
-                <span class="slider-value" id="rotZVal">0°</span>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <span class="control-label">Color</span>
-            <input type="color" id="colorPicker" class="color-picker" value="#6c5ce7">
-        </div>
-
-        <button class="action-btn btn-duplicate" onclick="duplicateSelected()">📋 Duplicate</button>
-        <button class="action-btn btn-delete" onclick="deleteSelected()">🗑️ Delete</button>
-
-        <div class="boolean-section">
-            <span class="control-label">Combine Shapes</span>
-            <button class="boolean-btn" onclick="startBoolean('union')" id="btnUnion">➕ Merge Together</button>
-            <button class="boolean-btn" onclick="startBoolean('subtract')" id="btnSubtract">➖ Cut Hole</button>
+        <div class="action-bar">
+            <button class="action-btn btn-undo" onclick="undo()">↩️ Undo</button>
+            <button class="action-btn btn-delete" onclick="deleteSelected()" id="deleteBtn" style="opacity: 0.4;">🗑️ Delete</button>
+            <button class="action-btn btn-export" onclick="exportSTL()">💾 Save</button>
         </div>
     </div>
 
-    <!-- Instructions -->
-    <div class="instructions">
-        <h4>🎮 Controls</h4>
-        <p>🖱️ Left click + drag: Rotate view</p>
-        <p>🖱️ Right click + drag: Pan</p>
-        <p>🖱️ Scroll: Zoom in/out</p>
-        <p>👆 Click shape: Select it</p>
+    <!-- Edit Panel -->
+    <div class="edit-panel" id="editPanel">
+        <div class="panel-header">
+            <span class="panel-title" id="editTitle">✏️ Edit Shape</span>
+            <button class="close-btn" onclick="closeEditPanel()">✕</button>
+        </div>
+        <div class="panel-content">
+            <!-- Size -->
+            <div class="control-section">
+                <span class="control-label">📐 Size</span>
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <label class="x">X</label>
+                        <input type="range" id="scaleX" min="0.2" max="4" step="0.1" value="1">
+                        <span class="slider-value" id="scaleXVal">1.0</span>
+                    </div>
+                    <div class="slider-row">
+                        <label class="y">Y</label>
+                        <input type="range" id="scaleY" min="0.2" max="4" step="0.1" value="1">
+                        <span class="slider-value" id="scaleYVal">1.0</span>
+                    </div>
+                    <div class="slider-row">
+                        <label class="z">Z</label>
+                        <input type="range" id="scaleZ" min="0.2" max="4" step="0.1" value="1">
+                        <span class="slider-value" id="scaleZVal">1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Position -->
+            <div class="control-section">
+                <span class="control-label">📍 Position</span>
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <label class="x">X</label>
+                        <input type="range" id="posX" min="-8" max="8" step="0.5" value="0">
+                        <span class="slider-value" id="posXVal">0</span>
+                    </div>
+                    <div class="slider-row">
+                        <label class="y">Y</label>
+                        <input type="range" id="posY" min="0" max="10" step="0.5" value="1">
+                        <span class="slider-value" id="posYVal">1</span>
+                    </div>
+                    <div class="slider-row">
+                        <label class="z">Z</label>
+                        <input type="range" id="posZ" min="-8" max="8" step="0.5" value="0">
+                        <span class="slider-value" id="posZVal">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rotation -->
+            <div class="control-section">
+                <span class="control-label">🔄 Rotation</span>
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <label class="x">X</label>
+                        <input type="range" id="rotX" min="0" max="360" step="15" value="0">
+                        <span class="slider-value" id="rotXVal">0°</span>
+                    </div>
+                    <div class="slider-row">
+                        <label class="y">Y</label>
+                        <input type="range" id="rotY" min="0" max="360" step="15" value="0">
+                        <span class="slider-value" id="rotYVal">0°</span>
+                    </div>
+                    <div class="slider-row">
+                        <label class="z">Z</label>
+                        <input type="range" id="rotZ" min="0" max="360" step="15" value="0">
+                        <span class="slider-value" id="rotZVal">0°</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color -->
+            <div class="control-section">
+                <span class="control-label">🎨 Color</span>
+                <div class="color-row" id="colorRow">
+                    <button class="color-btn" style="background: #6c5ce7" onclick="setColor('#6c5ce7')"></button>
+                    <button class="color-btn" style="background: #00b894" onclick="setColor('#00b894')"></button>
+                    <button class="color-btn" style="background: #e17055" onclick="setColor('#e17055')"></button>
+                    <button class="color-btn" style="background: #0984e3" onclick="setColor('#0984e3')"></button>
+                    <button class="color-btn" style="background: #fdcb6e" onclick="setColor('#fdcb6e')"></button>
+                    <button class="color-btn" style="background: #e84393" onclick="setColor('#e84393')"></button>
+                    <button class="color-btn" style="background: #00cec9" onclick="setColor('#00cec9')"></button>
+                    <button class="color-btn" style="background: #ff7675" onclick="setColor('#ff7675')"></button>
+                    <button class="color-btn" style="background: #ffffff; border: 2px solid #ddd" onclick="setColor('#ffffff')"></button>
+                    <button class="color-btn" style="background: #2d3436" onclick="setColor('#2d3436')"></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-actions">
+            <button class="panel-action-btn btn-duplicate" onclick="duplicateSelected()">📋 Copy</button>
+            <button class="panel-action-btn btn-delete-large" onclick="deleteSelected(); closeEditPanel();">🗑️ Delete</button>
+        </div>
     </div>
 
-    <!-- Bottom Toolbar -->
-    <div class="bottom-toolbar">
-        <button class="export-btn btn-undo" onclick="undo()">↩️ Undo</button>
-        <button class="export-btn btn-clear" onclick="clearAll()">🧹 Clear All</button>
-        <button class="export-btn btn-export-stl" onclick="exportSTL()">💾 Save STL</button>
+    <!-- Help Modal -->
+    <div class="help-tip" id="helpModal">
+        <h3>🎨 3D Shape Builder</h3>
+        <p>👆 Tap shapes below to add them</p>
+        <p>👆 Tap a shape to select it</p>
+        <p>☝️ One finger: rotate view</p>
+        <p>✌️ Two fingers: zoom & pan</p>
+        <p>💾 Save exports to STL file</p>
+        <button onclick="closeHelp()">Got it! 👍</button>
     </div>
 
     <script>
-        // Scene setup
         let scene, camera, renderer, controls;
         let objects = [];
         let selectedObject = null;
         let objectCounter = 0;
-        let history = [];
-        let booleanMode = null;
-        let firstBooleanObject = null;
 
         const colors = ['#6c5ce7', '#00b894', '#e17055', '#0984e3', '#fdcb6e', '#e84393', '#00cec9', '#ff7675'];
-        const shapeIcons = {
-            cube: '📦',
-            sphere: '🔮',
-            cylinder: '🥫',
-            cone: '🍦',
-            pyramid: '🔺',
-            torus: '🍩',
-            merged: '🔗'
+        const shapeNames = {
+            cube: '📦 Cube',
+            sphere: '🔮 Sphere',
+            cylinder: '🥫 Cylinder',
+            cone: '🍦 Cone',
+            pyramid: '🔺 Pyramid',
+            torus: '🍩 Donut'
         };
 
         function init() {
-            // Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x1a1a2e);
 
-            // Camera
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(8, 8, 8);
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+            camera.position.set(10, 10, 10);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // Controls
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 30;
+            controls.maxPolarAngle = Math.PI / 2 + 0.3;
 
             // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -516,11 +580,11 @@
             scene.add(directionalLight);
 
             // Grid
-            const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x333333);
+            const gridHelper = new THREE.GridHelper(16, 16, 0x444444, 0x333333);
             scene.add(gridHelper);
 
-            // Ground plane (for reference)
-            const groundGeo = new THREE.PlaneGeometry(20, 20);
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(16, 16);
             const groundMat = new THREE.MeshStandardMaterial({ 
                 color: 0x2d2d44, 
                 transparent: true, 
@@ -532,33 +596,67 @@
             ground.receiveShadow = true;
             scene.add(ground);
 
-            // Raycaster for selection
+            // Raycaster
             const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
+            const pointer = new THREE.Vector2();
 
-            renderer.domElement.addEventListener('click', (event) => {
-                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            function onTap(event) {
+                event.preventDefault();
+                
+                const rect = renderer.domElement.getBoundingClientRect();
+                const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+                const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+                
+                pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
-                raycaster.setFromCamera(mouse, camera);
+                raycaster.setFromCamera(pointer, camera);
                 const intersects = raycaster.intersectObjects(objects);
 
                 if (intersects.length > 0) {
                     selectObject(intersects[0].object);
+                } else {
+                    deselectObject();
                 }
+            }
+
+            // Use pointerup for better touch handling
+            let tapStart = null;
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                tapStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+            });
+            
+            renderer.domElement.addEventListener('pointerup', (e) => {
+                if (tapStart) {
+                    const dx = e.clientX - tapStart.x;
+                    const dy = e.clientY - tapStart.y;
+                    const dt = Date.now() - tapStart.time;
+                    
+                    // If it was a quick tap without much movement
+                    if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 300) {
+                        onTap(e);
+                    }
+                }
+                tapStart = null;
             });
 
-            // Window resize
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            // Setup control listeners
+            window.addEventListener('resize', onResize);
             setupControlListeners();
+            
+            // Check if first visit
+            if (!localStorage.getItem('shapeBuilderVisited')) {
+                document.getElementById('helpModal').classList.remove('hidden');
+            } else {
+                document.getElementById('helpModal').classList.add('hidden');
+            }
 
             animate();
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function animate() {
@@ -607,42 +705,56 @@
             objectCounter++;
             mesh.userData = {
                 id: objectCounter,
-                name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${objectCounter}`,
+                name: `${shapeNames[type]} ${objectCounter}`,
                 type: type,
                 color: color
             };
 
             scene.add(mesh);
             objects.push(mesh);
-            
-            saveHistory();
-            updateObjectList();
+            updateCounter();
             selectObject(mesh);
+            
+            // Brief haptic feedback if available
+            if (navigator.vibrate) navigator.vibrate(30);
         }
 
         function selectObject(obj) {
-            // Handle boolean mode
-            if (booleanMode && firstBooleanObject && obj !== firstBooleanObject) {
-                performBoolean(firstBooleanObject, obj);
-                return;
-            }
-
-            // Deselect previous
             if (selectedObject) {
                 selectedObject.material.emissive.setHex(0x000000);
             }
 
             selectedObject = obj;
-            
-            if (obj) {
-                obj.material.emissive.setHex(0x333333);
-                document.getElementById('sidePanel').style.display = 'block';
-                updateControlsFromObject(obj);
-            } else {
-                document.getElementById('sidePanel').style.display = 'none';
-            }
+            obj.material.emissive.setHex(0x222222);
 
-            updateObjectList();
+            document.getElementById('selectionIndicator').classList.add('show');
+            document.getElementById('selectedName').textContent = obj.userData.name;
+            document.getElementById('deleteBtn').style.opacity = '1';
+            
+            updateControlsFromObject(obj);
+        }
+
+        function deselectObject() {
+            if (selectedObject) {
+                selectedObject.material.emissive.setHex(0x000000);
+            }
+            selectedObject = null;
+            document.getElementById('selectionIndicator').classList.remove('show');
+            document.getElementById('deleteBtn').style.opacity = '0.4';
+            closeEditPanel();
+        }
+
+        function openEditPanel() {
+            if (!selectedObject) return;
+            document.getElementById('editPanel').classList.add('open');
+            document.getElementById('bottomBar').style.display = 'none';
+            document.getElementById('editTitle').textContent = '✏️ ' + selectedObject.userData.name;
+            updateColorSelection();
+        }
+
+        function closeEditPanel() {
+            document.getElementById('editPanel').classList.remove('open');
+            document.getElementById('bottomBar').style.display = 'block';
         }
 
         function updateControlsFromObject(obj) {
@@ -669,12 +781,28 @@
             document.getElementById('rotXVal').textContent = Math.round(rotX) + '°';
             document.getElementById('rotYVal').textContent = Math.round(rotY) + '°';
             document.getElementById('rotZVal').textContent = Math.round(rotZ) + '°';
+        }
 
-            document.getElementById('colorPicker').value = obj.userData.color || '#6c5ce7';
+        function updateColorSelection() {
+            if (!selectedObject) return;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.style.background === selectedObject.userData.color || 
+                    btn.style.backgroundColor === selectedObject.userData.color) {
+                    btn.classList.add('selected');
+                }
+            });
+        }
+
+        function setColor(color) {
+            if (!selectedObject) return;
+            selectedObject.material.color.setStyle(color);
+            selectedObject.userData.color = color;
+            updateColorSelection();
+            if (navigator.vibrate) navigator.vibrate(20);
         }
 
         function setupControlListeners() {
-            // Scale
             ['scaleX', 'scaleY', 'scaleZ'].forEach(id => {
                 document.getElementById(id).addEventListener('input', (e) => {
                     if (selectedObject) {
@@ -683,10 +811,8 @@
                         document.getElementById(id + 'Val').textContent = parseFloat(e.target.value).toFixed(1);
                     }
                 });
-                document.getElementById(id).addEventListener('change', saveHistory);
             });
 
-            // Position
             ['posX', 'posY', 'posZ'].forEach(id => {
                 document.getElementById(id).addEventListener('input', (e) => {
                     if (selectedObject) {
@@ -695,10 +821,8 @@
                         document.getElementById(id + 'Val').textContent = parseFloat(e.target.value).toFixed(1);
                     }
                 });
-                document.getElementById(id).addEventListener('change', saveHistory);
             });
 
-            // Rotation
             ['rotX', 'rotY', 'rotZ'].forEach(id => {
                 document.getElementById(id).addEventListener('input', (e) => {
                     if (selectedObject) {
@@ -707,52 +831,25 @@
                         document.getElementById(id + 'Val').textContent = Math.round(e.target.value) + '°';
                     }
                 });
-                document.getElementById(id).addEventListener('change', saveHistory);
             });
-
-            // Color
-            document.getElementById('colorPicker').addEventListener('input', (e) => {
-                if (selectedObject) {
-                    selectedObject.material.color.setStyle(e.target.value);
-                    selectedObject.userData.color = e.target.value;
-                    updateObjectList();
-                }
-            });
-            document.getElementById('colorPicker').addEventListener('change', saveHistory);
         }
 
-        function updateObjectList() {
-            const list = document.getElementById('objectList');
-            
-            if (objects.length === 0) {
-                list.innerHTML = '<div class="empty-state">Click a shape to start!</div>';
-                return;
-            }
-
-            list.innerHTML = objects.map(obj => `
-                <div class="object-item ${obj === selectedObject ? 'selected' : ''}" 
-                     onclick="selectObjectById(${obj.userData.id})"
-                     style="border-left: 4px solid ${obj.userData.color}">
-                    <span class="object-icon">${shapeIcons[obj.userData.type] || '📦'}</span>
-                    <span class="object-name">${obj.userData.name}</span>
-                </div>
-            `).join('');
-        }
-
-        function selectObjectById(id) {
-            const obj = objects.find(o => o.userData.id === id);
-            if (obj) selectObject(obj);
+        function updateCounter() {
+            document.getElementById('objectCounter').textContent = `🎨 ${objects.length} shape${objects.length !== 1 ? 's' : ''}`;
         }
 
         function deleteSelected() {
             if (!selectedObject) return;
             
-            saveHistory();
             scene.remove(selectedObject);
             objects = objects.filter(o => o !== selectedObject);
             selectedObject = null;
-            document.getElementById('sidePanel').style.display = 'none';
-            updateObjectList();
+            
+            document.getElementById('selectionIndicator').classList.remove('show');
+            document.getElementById('deleteBtn').style.opacity = '0.4';
+            updateCounter();
+            
+            if (navigator.vibrate) navigator.vibrate(50);
         }
 
         function duplicateSelected() {
@@ -764,7 +861,7 @@
             const mesh = new THREE.Mesh(geometry, material);
 
             mesh.position.copy(original.position);
-            mesh.position.x += 2;
+            mesh.position.x += 2.5;
             mesh.rotation.copy(original.rotation);
             mesh.scale.copy(original.scale);
             mesh.castShadow = true;
@@ -773,134 +870,29 @@
             objectCounter++;
             mesh.userData = {
                 id: objectCounter,
-                name: `${original.userData.type.charAt(0).toUpperCase() + original.userData.type.slice(1)} ${objectCounter}`,
+                name: `${shapeNames[original.userData.type] || 'Shape'} ${objectCounter}`,
                 type: original.userData.type,
                 color: original.userData.color
             };
 
             scene.add(mesh);
             objects.push(mesh);
-            
-            saveHistory();
-            updateObjectList();
+            updateCounter();
             selectObject(mesh);
-        }
-
-        function startBoolean(operation) {
-            if (!selectedObject) return;
+            updateControlsFromObject(mesh);
             
-            booleanMode = operation;
-            firstBooleanObject = selectedObject;
-            
-            const indicator = document.getElementById('modeIndicator');
-            indicator.textContent = operation === 'union' 
-                ? '➕ Click another shape to merge with' 
-                : '➖ Click another shape to cut from';
-            indicator.classList.add('active');
-        }
-
-        function performBoolean(obj1, obj2) {
-            // For a proper boolean, we'd need a CSG library
-            // This is a simplified version that groups objects
-            
-            const indicator = document.getElementById('modeIndicator');
-            indicator.classList.remove('active');
-
-            if (booleanMode === 'union') {
-                // Create a group
-                const group = new THREE.Group();
-                
-                // Clone both objects into the group
-                const clone1 = obj1.clone();
-                const clone2 = obj2.clone();
-                
-                group.add(clone1);
-                group.add(clone2);
-                
-                // Calculate center
-                const box = new THREE.Box3().setFromObject(group);
-                const center = box.getCenter(new THREE.Vector3());
-                
-                // Remove originals
-                scene.remove(obj1);
-                scene.remove(obj2);
-                objects = objects.filter(o => o !== obj1 && o !== obj2);
-                
-                // Add merged mesh
-                // For STL export, we need a single mesh, so we merge geometries
-                const mergedGeometry = new THREE.BufferGeometry();
-                const geometries = [];
-                
-                group.traverse((child) => {
-                    if (child.isMesh) {
-                        const geo = child.geometry.clone();
-                        geo.applyMatrix4(child.matrixWorld);
-                        geometries.push(geo);
-                    }
-                });
-                
-                // Use BufferGeometryUtils if available, otherwise just use the group
-                objectCounter++;
-                const mergedMesh = new THREE.Mesh(
-                    obj1.geometry.clone(),
-                    new THREE.MeshStandardMaterial({ 
-                        color: obj1.userData.color,
-                        metalness: 0.1,
-                        roughness: 0.5
-                    })
-                );
-                mergedMesh.position.copy(center);
-                mergedMesh.userData = {
-                    id: objectCounter,
-                    name: `Merged ${objectCounter}`,
-                    type: 'merged',
-                    color: obj1.userData.color,
-                    isGroup: true,
-                    children: [clone1, clone2]
-                };
-                
-                // For now, add both as children of scene but track as group
-                scene.add(group);
-                group.userData = mergedMesh.userData;
-                objects.push(group);
-                
-                saveHistory();
-                updateObjectList();
-                selectObject(group);
-            }
-
-            booleanMode = null;
-            firstBooleanObject = null;
-        }
-
-        function clearAll() {
-            if (objects.length === 0) return;
-            if (!confirm('Clear all shapes?')) return;
-            
-            saveHistory();
-            objects.forEach(obj => scene.remove(obj));
-            objects = [];
-            selectedObject = null;
-            document.getElementById('sidePanel').style.display = 'none';
-            updateObjectList();
-        }
-
-        function saveHistory() {
-            // Simple history - just track object count
-            history.push(objects.length);
-            if (history.length > 50) history.shift();
+            if (navigator.vibrate) navigator.vibrate(30);
         }
 
         function undo() {
-            // Basic undo - remove last object
             if (objects.length > 0) {
                 const last = objects.pop();
                 scene.remove(last);
                 if (selectedObject === last) {
-                    selectedObject = null;
-                    document.getElementById('sidePanel').style.display = 'none';
+                    deselectObject();
                 }
-                updateObjectList();
+                updateCounter();
+                if (navigator.vibrate) navigator.vibrate(30);
             }
         }
 
@@ -911,33 +903,34 @@
             }
 
             const exporter = new THREE.STLExporter();
-            
-            // Create a group with all objects for export
             const exportGroup = new THREE.Group();
+            
             objects.forEach(obj => {
-                if (obj.isGroup) {
-                    obj.children.forEach(child => {
-                        if (child.isMesh) {
-                            const clone = child.clone();
-                            clone.position.add(obj.position);
-                            exportGroup.add(clone);
-                        }
-                    });
-                } else if (obj.isMesh) {
-                    exportGroup.add(obj.clone());
-                }
+                const clone = obj.clone();
+                exportGroup.add(clone);
             });
 
             const stlString = exporter.parse(exportGroup, { binary: false });
             
             const blob = new Blob([stlString], { type: 'text/plain' });
             const link = document.createElement('a');
+            const date = new Date().toISOString().slice(0,10);
             link.href = URL.createObjectURL(blob);
-            link.download = 'my-design.stl';
+            link.download = `my-design-${date}.stl`;
             link.click();
+            
+            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
         }
 
-        // Initialize
+        function showHelp() {
+            document.getElementById('helpModal').classList.remove('hidden');
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').classList.add('hidden');
+            localStorage.setItem('shapeBuilderVisited', 'true');
+        }
+
         init();
     </script>
 </body>
