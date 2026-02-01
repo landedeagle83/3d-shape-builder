@@ -6,6 +6,7 @@
     <title>3D Shape Builder</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/DragControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
     <style>
         * {
@@ -592,6 +593,7 @@
         <h3>🎨 3D Shape Builder</h3>
         <p>👆 Tap shapes to add them</p>
         <p>👆 Tap a shape to select & edit</p>
+        <p>✊ Click & drag shapes to move them</p>
         <p>☝️ One finger: rotate view</p>
         <p>✌️ Two fingers: zoom & pan</p>
         <p>💾 Save exports STL for printing</p>
@@ -599,10 +601,11 @@
     </div>
 
     <script>
-        let scene, camera, renderer, controls;
+        let scene, camera, renderer, controls, dragControls;
         let objects = [];
         let selectedObject = null;
         let objectCounter = 0;
+        let isDragging = false;
 
         const colors = ['#6c5ce7','#00b894','#e17055','#0984e3','#fdcb6e','#e84393','#00cec9','#ff7675','#55efc4','#ffeaa7'];
 
@@ -624,6 +627,34 @@
             controls.dampingFactor = 0.05;
             controls.minDistance = 5;
             controls.maxDistance = 40;
+
+            // Drag Controls - click and drag to move objects
+            dragControls = new THREE.DragControls(objects, camera, renderer.domElement);
+            
+            dragControls.addEventListener('dragstart', function(event) {
+                isDragging = true;
+                controls.enabled = false; // Disable orbit while dragging
+                selectObject(event.object);
+            });
+            
+            dragControls.addEventListener('drag', function(event) {
+                // Keep object above ground
+                if (event.object.position.y < 0.1) {
+                    event.object.position.y = 0.1;
+                }
+                // Update sliders in real-time
+                if (selectedObject === event.object) {
+                    updateControlsFromObject(event.object);
+                }
+            });
+            
+            dragControls.addEventListener('dragend', function(event) {
+                isDragging = false;
+                controls.enabled = true; // Re-enable orbit controls
+                if (selectedObject === event.object) {
+                    updateControlsFromObject(event.object);
+                }
+            });
 
             // Lights
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
@@ -655,7 +686,10 @@
             });
 
             renderer.domElement.addEventListener('pointerup', e => {
-                if (!tapStart) return;
+                if (!tapStart || isDragging) {
+                    tapStart = null;
+                    return;
+                }
                 const dx = e.clientX - tapStart.x;
                 const dy = e.clientY - tapStart.y;
                 const dt = Date.now() - tapStart.time;
