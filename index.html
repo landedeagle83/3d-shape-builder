@@ -591,11 +591,12 @@
     <!-- Help Modal -->
     <div class="help-modal" id="helpModal">
         <h3>🎨 3D Shape Builder</h3>
-        <p>👆 Tap shapes to add them</p>
-        <p>👆 Tap a shape to select & edit</p>
-        <p>✊ Click & drag shapes to move them</p>
-        <p>☝️ One finger: rotate view</p>
-        <p>✌️ Two fingers: zoom & pan</p>
+        <p>👆 Tap shape buttons to add</p>
+        <p>👆 Tap a shape to select it</p>
+        <p>☝️ Drag selected shape to move</p>
+        <p>🤏 Pinch on shape to resize</p>
+        <p>🔄 Twist on shape to rotate</p>
+        <p>✌️ Two fingers on empty = orbit</p>
         <p>💾 Save exports STL for printing</p>
         <button onclick="closeHelp()">Let's Build! 🚀</button>
     </div>
@@ -606,6 +607,16 @@
         let selectedObject = null;
         let objectCounter = 0;
         let isDragging = false;
+        
+        // Touch gesture state
+        let touchState = {
+            active: false,
+            startDist: 0,
+            startAngle: 0,
+            startScale: null,
+            startRotation: null,
+            mode: null // 'pinch' or 'rotate'
+        };
 
         const colors = ['#6c5ce7','#00b894','#e17055','#0984e3','#fdcb6e','#e84393','#00cec9','#ff7675','#55efc4','#ffeaa7'];
 
@@ -711,6 +722,11 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
+            // Two-finger gesture handling for rotate & scale
+            renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+            renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+            renderer.domElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+
             setupSliders();
             
             if (!localStorage.getItem('shapeBuilderV2')) {
@@ -724,6 +740,72 @@
             requestAnimationFrame(animate);
             controls.update();
             renderer.render(scene, camera);
+        }
+
+        // Get distance between two touch points
+        function getTouchDistance(t1, t2) {
+            const dx = t1.clientX - t2.clientX;
+            const dy = t1.clientY - t2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // Get angle between two touch points
+        function getTouchAngle(t1, t2) {
+            return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
+        }
+
+        function handleTouchStart(e) {
+            if (e.touches.length === 2 && selectedObject) {
+                e.preventDefault();
+                controls.enabled = false; // Disable orbit controls
+                
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                
+                touchState.active = true;
+                touchState.startDist = getTouchDistance(t1, t2);
+                touchState.startAngle = getTouchAngle(t1, t2);
+                touchState.startScale = selectedObject.scale.clone();
+                touchState.startRotation = selectedObject.rotation.y;
+                touchState.mode = 'gesture';
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (e.touches.length === 2 && touchState.active && selectedObject) {
+                e.preventDefault();
+                
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                
+                // Pinch to scale
+                const currentDist = getTouchDistance(t1, t2);
+                const scaleFactor = currentDist / touchState.startDist;
+                const newScale = Math.max(0.2, Math.min(5, touchState.startScale.x * scaleFactor));
+                selectedObject.scale.set(newScale, newScale, newScale);
+                
+                // Twist to rotate (around Y axis)
+                const currentAngle = getTouchAngle(t1, t2);
+                const angleDiff = currentAngle - touchState.startAngle;
+                selectedObject.rotation.y = touchState.startRotation + angleDiff;
+                
+                // Update UI if edit panel is open
+                updateControlsFromObject(selectedObject);
+                
+                if (navigator.vibrate) navigator.vibrate(5);
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (touchState.active) {
+                touchState.active = false;
+                touchState.mode = null;
+                controls.enabled = true; // Re-enable orbit controls
+                
+                if (selectedObject) {
+                    updateControlsFromObject(selectedObject);
+                }
+            }
         }
 
         function createGeometry(type) {
