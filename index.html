@@ -478,9 +478,15 @@
                 font-size: 24px;
             }
             
-            /* Full screen viewport */
+            /* Viewport takes remaining space */
+            .main-content {
+                flex: 1;
+                overflow: hidden;
+            }
+            
             .viewport {
-                height: calc(100vh - 44px - 140px);
+                flex: 1;
+                min-height: 0;
             }
             
             /* Make help modal smaller */
