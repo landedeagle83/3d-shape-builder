@@ -100,6 +100,7 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+            min-height: 0; /* Critical for flex */
         }
 
         /* Left Panel - Object List */
@@ -175,11 +176,16 @@
             flex: 1;
             position: relative;
             background: #1e1e1e;
+            min-height: 0; /* Critical for flex child */
+            overflow: hidden;
         }
 
         #canvas-container {
             width: 100%;
             height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .viewport-info {
@@ -478,16 +484,7 @@
                 font-size: 24px;
             }
             
-            /* Viewport takes remaining space */
-            .main-content {
-                flex: 1;
-                overflow: hidden;
-            }
-            
-            .viewport {
-                flex: 1;
-                min-height: 0;
-            }
+            /* Viewport already handles flex properly */
             
             /* Make help modal smaller */
             .modal {
