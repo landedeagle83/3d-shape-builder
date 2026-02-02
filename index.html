@@ -100,7 +100,6 @@
             display: flex;
             flex: 1;
             overflow: hidden;
-            min-height: 0; /* Critical for flex */
         }
 
         /* Left Panel - Object List */
@@ -176,16 +175,11 @@
             flex: 1;
             position: relative;
             background: #1e1e1e;
-            min-height: 0; /* Critical for flex child */
-            overflow: hidden;
         }
 
         #canvas-container {
             width: 100%;
             height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
         }
 
         .viewport-info {
@@ -439,66 +433,9 @@
 
         /* Mobile Adjustments */
         @media (max-width: 768px) {
-            /* Hide desktop panels */
             .left-panel { display: none; }
             .right-panel { display: none; }
-            
-            /* Compact top toolbar */
-            .top-toolbar {
-                height: 44px;
-                padding: 0 8px;
-                gap: 4px;
-            }
-            
-            .app-title { 
-                font-size: 13px;
-                margin-right: 8px;
-            }
-            
-            .toolbar-group {
-                padding: 0 4px;
-            }
-            
-            .toolbar-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
-            }
-            
-            /* Larger bottom panel for easier touch */
-            .bottom-panel {
-                height: 140px;
-            }
-            
-            .shape-library {
-                padding: 8px;
-                gap: 6px;
-            }
-            
-            .shape-card {
-                min-width: 70px;
-                height: 70px;
-            }
-            
-            .shape-card-icon {
-                font-size: 24px;
-            }
-            
-            /* Viewport already handles flex properly */
-            
-            /* Make help modal smaller */
-            .modal {
-                max-width: 90%;
-                padding: 20px;
-            }
-            
-            .modal h3 {
-                font-size: 16px;
-            }
-            
-            .modal p {
-                font-size: 13px;
-            }
+            .bottom-panel { height: 120px; }
         }
     </style>
 </head>
